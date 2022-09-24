@@ -1,0 +1,152 @@
+mphopen;
+% define range of parameter
+%1- number of stairs
+    number1={'2', '3', '4', '5', '6' }; 
+%2-angle of stairs
+    angle1={'80', '90', '100', '110', '120' };
+% the witdth of throat on top of the channel
+    throat1={'60[um]', '80[um]', '100[um]', '120[um]', '140[um]'};
+% the defferance of voltage
+    delta1 = [0.1 1 2 5 10];
+ % here I define the tree of data structure
+for i = 1:5
+    s(i).wf1=[];
+    s(i).wf2=[];
+    s(i).ws=[];
+    S(i).ws_general=[];
+    s(i).mi=[];
+    s(i).end1=[];
+    s(i).end2=[];
+    s(i).totalv=[];
+    s(i).situ=[];
+    s(i).deltav=[];
+end
+v={s(1) ,s(2) ,s(3) ,s(4) ,s(5)};
+delta={};
+for i = 1:5
+    delta{i}=v;
+end
+throat={};
+for i =1:5
+    throat{i}=delta;
+end
+angle={};
+for i = 1:5
+    angle{i}=throat;
+end
+number00={};
+for i = 1:5
+    number00{i}=angle;
+end
+% the main engine of optimaization start from here by considering 5 loop to
+% each other which causes 3125 run 
+for i=1:5
+    % define the number of stairs in comsol
+    model.param.set('n', number1{i});
+    for j =1:5
+        %define angle of stairs in comsol
+        model.param.set('angle', angle1{j});
+        for l =1:5
+            % define width of throat in comsol
+            model.param.set('hight_pick_of_channel', throat1{l});
+            for m =1:5
+                for p =1:5
+                    % define voltage of each electrod according to deltav  
+                    v1=(p-1)*delta1(m)+ 10;
+                    v2=v1+delta1(m);
+                    model.physics('ec').feature('term1').set('V0', num2str(v1));
+                    model.physics('ec').feature('term2').set('V0', num2str(v2));
+                    %run the model 
+                    model.study('std1').run();
+                    
+                    
+                    % export the (start point and end point )position of two streamline 
+                    model.result.export('plot1').run()
+                    model.result.export('plot2').run()
+                    
+                    % read csv file of partical position in the start and
+                    % end of channel 
+                    
+                    streamline1=csvread('D:\cell sepration project\stair channel\optimization\export\streamline1.csv');
+                    streamline2=csvread('D:\cell sepration project\stair channel\optimization\export\streamline2.csv');
+
+                    ws_general=sqrt((streamline2(end,3)-streamline1(1,3))^2 + (streamline2(end,4)-streamline1(1,4))^2);
+                    number00{i}{j}{l}{m}{p}.ws_general=ws_general;
+                    
+                    % definning a limitation to understand that stream
+                    % lines cross from interior of outlut or not 
+                 
+                    outlet_limite=mphevaluate(model, 'outlet_limit')*(10^6);
+                    
+                    % finding streamline which pass the limitation and
+                    % inter in the outlet channel
+                    
+                    
+                    streamline1_out=streamline1(find(streamline1(:,3)>outlet_limite),3:4);
+                    streamline2_out=streamline2(find(streamline2(:,3)>outlet_limite),3:4);
+                    % calculation of width of foucasing stream line 1 
+
+                    
+                    if (numel(streamline1_out)==0)
+                        wf1='stream line1 not arrived enf';
+                    else
+                        wf1=sqrt((streamline1_out(1,1)-streamline1_out(end,1))^2 + (streamline1_out(1,2)-streamline1_out(end,2))^2);
+                    end
+                    % calculation of width of foucasing stream line 2
+                    
+                    
+                    if (numel(streamline2_out)==0)
+                        wf2='stream line2 not arrived enf';
+                    else
+                        wf2=sqrt((streamline2_out(1,1)-streamline2_out(end,1))^2 + (streamline2_out(1,2)-streamline2_out(end,2))^2);
+                    end
+                    
+                    
+                    number00{i}{j}{l}{m}{p}.wf1=wf1;
+                    number00{i}{j}{l}{m}{p}.wf2=wf2;
+                    
+                    %calculation of width of seperation
+                    if (numel(streamline1_out)==0)
+                        ws='not seprate';
+                    elseif (numel(streamline2_out)==0)
+                        ws='not seprate';
+                    else
+                        ws=sqrt((streamline2_out(end,1)-streamline1_out(1,1))^2 + (streamline2_out(end,2)-streamline1_out(1,2))^2);
+                    end
+                    number00{i}{j}{l}{m}{p}.ws=ws;
+                    
+                    if (numel(streamline1_out)==0)
+                        number00{i}{j}{l}{m}{p}.situ=0;
+                    elseif (numel(streamline2_out)==0)
+                        number00{i}{j}{l}{m}{p}.situ=0;
+                    elseif max(streamline2_out(:,2))>60
+                        number00{i}{j}{l}{m}{p}.situ=0;
+                    elseif min(streamline1_out(:,2))<60
+                        number00{i}{j}{l}{m}{p}.situ=0;
+                    else
+                        number00{i}{j}{l}{m}{p}.situ=1;
+                    end
+                    
+                    % calculation of mixing index
+                    model.result.numerical('int1').run();
+                    cbar=model.result.numerical('int1').getReal();
+                    %cbar=model.result.table('tbl1').getReal();
+                    %model.result.table('tbl1').clearTableData();
+                    mi = 1-sqrt(cbar);
+                    number00{i}{j}{l}{m}{p}.mi=mi;
+                    % calculatioing of totalv and number of stream lines of
+                    % each particel that enter to outlet channel
+                    number00{i}{j}{l}{m}{p}.totalv=v1+v2;
+                    number00{i}{j}{l}{m}{p}.end1=numel(streamline1_out)/2;
+                    number00{i}{j}{l}{m}{p}.end2=numel(streamline2_out)/2;
+                    number00{i}{j}{l}{m}{p}.deltav=delta1(m);
+                    
+                    
+                end
+            end
+        end
+    end
+end
+                     
+                        
+   
