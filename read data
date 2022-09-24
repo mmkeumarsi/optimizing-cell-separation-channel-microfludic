@@ -1,0 +1,25 @@
+data={};
+row=1;
+for i=1:5 
+    for j=1:5
+        for k=1:5 
+            for l=1:5 
+               
+                  if (number00{1}{i}{j}{k}{l}.situ==1) % &&number00{1}{i}{j}{k}{l}.deltav==5)
+                    data{row,1}=number00{1}{i}{j}{k}{l}.ws;
+                    data{row,2}=number00{1}{i}{j}{k}{l}.ws_general;
+                    data{row,3}=number00{1}{i}{j}{k}{l}.mi;
+                    data{row,4}=number00{1}{i}{j}{k}{l}.totalv;
+                    data{row,5}=number00{1}{i}{j}{k}{l}.deltav;
+                    data{row,6}=number00{1}{i}{j}{k}{l}.end1;
+                    data{row,7}=number00{1}{i}{j}{k}{l}.end2;
+                    data{row,8}=number00{1}{i}{j}{k}{l}.wf1;
+                    data{row,9}=number00{1}{i}{j}{k}{l}.wf2;
+                    data{row,10}=[1 i j k l];
+                    
+                    row=row+1;
+                  end
+            end
+        end
+    end 
+end
